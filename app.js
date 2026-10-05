@@ -2255,8 +2255,7 @@ el.btnFav.addEventListener("click", () => {
   if (song) toggleFav(song);
 });
 
-el.btnDownload.addEventListener("click", async () => {
-  const song = queue[currentIndex];
+async function downloadSong(song) {
   if (!song) return;
   toast("Downloading…");
   try {
@@ -2274,9 +2273,21 @@ el.btnDownload.addEventListener("click", async () => {
     toast("Downloaded: " + song.title + " ✓");
   } catch (err) {
     console.error("Download error:", err);
-    toast("Download failed — try again");
+    // Mobile browsers can block blob downloads from a cross-origin audio host.
+    // Fall back to the native stream handoff so it still reaches device storage.
+    const link = document.createElement("a");
+    link.href = song.streamUrl;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.download = `${song.title} - ${song.artist}.mp3`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    toast("Download started — check your device downloads");
   }
-});
+}
+
+el.btnDownload.addEventListener("click", () => downloadSong(queue[currentIndex]));
 
 el.btnDim.addEventListener("click", () => {
   const on = document.documentElement.classList.toggle("dim");
@@ -2817,6 +2828,7 @@ const np = {
   repeat: document.getElementById("np-repeat"),
   volume: document.getElementById("np-volume"),
   fav: document.getElementById("np-fav"),
+  download: document.getElementById("np-download"),
   more: document.getElementById("np-more"),
   lyricsToggle: document.getElementById("np-lyrics-toggle"),
   outputToggle: document.getElementById("np-output-toggle"),
@@ -3034,6 +3046,7 @@ np.fav.addEventListener("click", () => {
   const s = queue[currentIndex];
   if (s) np.fav.classList.toggle("lit", isFav(s.id));
 });
+np.download?.addEventListener("click", () => downloadSong(queue[currentIndex]));
 np.close.addEventListener("click", () => closeNowPlaying());
 np.lyricsToggle.addEventListener("click", () => setLyricsOpen(!lyricsOpen));
 np.outputToggle?.addEventListener("click", () => {
